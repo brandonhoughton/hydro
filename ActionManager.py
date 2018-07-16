@@ -1,5 +1,7 @@
 from pywemo import discover_devices
 import time
+import json
+from pathlib import Path
 
 def minSec(minutes, seconds):
     return minutes * 60 + seconds
@@ -29,73 +31,73 @@ def runFor(sec, device):
         #print('Last change was ', device.last_change)
 
 
-lastFlood = 0
+#Try to load last flood time from disk
+lastFlood = 12
 interval = 2
 
 quietDuration = minSec(1,5)
-fullDuration  = minSec(1,25)
+minDuration  = minSec(1,25)
+fullDuration = minSec(3,0)
 
+my_file = Path("./info.json")
+if my_file.is_file():
+    x = json.load(my_file)
+    lastFlood = x['lastFlood']
+    interval = x['interval']
+    quietDuration = x['quietDuration']
+    minDuration  =  x['minDuration']
+    fullDuration =  x['fullDuration']
+
+
+
+pump = None
+devices = []
 while True:
-    pump = None
-    devices = []
-    while True:
-        devices = discover_devices()
-        if len(devices) == 0:
-            continue
-        else:
-            print("Found devices: ", devices)
-            for dev in devices:
-                print( "Checking device: ", dev.name)
-                if dev.name == 'Hydroponic Pump':
-                    print( "Found pump: ", dev.name)
-                    pump = dev
-                    break
-            if pump != None:
+    devices = discover_devices()
+    if len(devices) == 0:
+        continue
+    else:
+        print("Found devices: ", devices)
+        for dev in devices:
+            print( "Checking device: ", dev.name)
+            if dev.name == 'Hydroponic Pump':
+                print( "Found pump: ", dev.name)
+                pump = dev
                 break
-    print('Using device:')
-    print(pump)
-    try:
-        while True:
-            hour = time.localtime().tm_hour
-            minute = time.localtime().tm_min
+        if pump != None:
+            break
+print('Using device:')
+print(pump)
+try:
+    hour = time.localtime().tm_hour
+    minute = time.localtime().tm_min
 
-            #print("Interval hour:", hour % interval == 0)
-            #print("Flooded this hour:", lastFlood == hour)
+    if hour % interval == 0 and lastFlood != hour:
+        print('Flooding tubes', time.strftime("%c"))
+        duration = minDuration
+        if hour % (interval * 2) == 0:
+            print('Running longer')
+            duration = fullDuration
+        if shouldBeQuiet(hour):
+            print('Quiet mode enabled')
+            duration = quietDuration
+        runFor(duration, pump)
+        lastFlood = hour
+    else:
+        print('Waiting ... ', time.strftime("%c"))
 
-            if hour % interval == 0 and lastFlood != hour:
-                print('Flooding tubes h', hour, 'm', minute)
-                duration = fullDuration
-                if shouldBeQuiet(hour):
-                    print('Quiet mode enabled')
-                    duration = quietDuration
-                runFor(duration, pump)
-                lastFlood = hour
-            time.sleep(10)
-
-            if pump.get_state() == 1:
-                print('Switching device off')
-                pump.toggle()
-    except Exception as exp:
-        print(exp)
-        pass
-
-# pump = devices[0]
-
-# print(pump)
-# print(pump.list_services())
-# print(pump.get_state())
-
-# #url = 'http://%s:%i/setup.xml' % (address, port)
-# #discovery.device_from_description(url, None)
-
-# print(devices)
-# print(devices[0].list_services())
+    if pump.get_state() == 1:
+        print('Switching device off')
+        pump.toggle()
+except Exception as exp:
+    print(exp)
+    pass
 
 
-
-# print(devices[0].get_state())
-# print(devices[0].last_change())
-
-
-# #devices[0].toggle()
-# #devices[0].toggle()
+dat = {}
+dat['lastFlood'] = lastFlood
+dat['interval'] = interval
+dat['quietDuration'] = quietDuration
+dat['minDuration'] = minDuration
+dat['fullDuration'] = fullDuration
+json.dump(dat, my_file.open('w'))
