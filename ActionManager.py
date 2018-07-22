@@ -39,14 +39,14 @@ quietDuration = minSec(1,5)
 minDuration  = minSec(1,25)
 fullDuration = minSec(3,0)
 
-my_file = Path("./info.json")
-if my_file.is_file():
-    x = json.load(my_file)
-    lastFlood = x['lastFlood']
-    interval = x['interval']
-    quietDuration = x['quietDuration']
-    minDuration  =  x['minDuration']
-    fullDuration =  x['fullDuration']
+# my_file = Path("./info.json")
+# if my_file.is_file():
+#     x = json.load(my_file)
+#     lastFlood = x['lastFlood']
+#     interval = x['interval']
+#     quietDuration = x['quietDuration']
+#     minDuration  =  x['minDuration']
+#     fullDuration =  x['fullDuration']
 
 
 
@@ -68,30 +68,32 @@ while True:
             break
 print('Using device:')
 print(pump)
-try:
-    hour = time.localtime().tm_hour
-    minute = time.localtime().tm_min
+while True:
+    time.sleep(10)
+    try:
+        hour = time.localtime().tm_hour
+        minute = time.localtime().tm_min
 
-    if hour % interval == 0 and lastFlood != hour:
-        print('Flooding tubes', time.strftime("%c"))
-        duration = minDuration
-        if hour % (interval * 2) == 0:
-            print('Running longer')
-            duration = fullDuration
-        if shouldBeQuiet(hour):
-            print('Quiet mode enabled')
-            duration = quietDuration
-        runFor(duration, pump)
-        lastFlood = hour
-    else:
-        print('Waiting ... ', time.strftime("%c"))
+        if hour % interval == 0 and lastFlood != hour:
+            print('Flooding tubes', time.strftime("%c"))
+            duration = minDuration
+            if hour % (interval * 2) == 0:
+                print('Running longer')
+                duration = fullDuration
+            if shouldBeQuiet(hour):
+                print('Quiet mode enabled')
+                duration = quietDuration
+            runFor(duration, pump)
+            lastFlood = hour
+        else:
+            print('Waiting ... ', time.strftime("%c"))
 
-    if pump.get_state() == 1:
-        print('Switching device off')
-        pump.toggle()
-except Exception as exp:
-    print(exp)
-    pass
+        if pump.get_state() == 1:
+            print('Switching device off')
+            pump.toggle()
+    except Exception as exp:
+        print(exp)
+        pass
 
 
 dat = {}
